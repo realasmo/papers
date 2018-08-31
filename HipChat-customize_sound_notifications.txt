@@ -1,0 +1,81 @@
+# Setting up HipChat custom notification sounds.
+# asmo@coneev 30-08-2018
+###
+
+In past HipChat versions you could just overwrite the original files with your custom ones
+and if the audio was playable under your OS, HipChat would play the sounds as well.
+
+In recent HipChat versions there's additional validation and ofcourse no mention about it
+in docs and the product's support have no idea, HipChat just seems to ignore replaced
+notification sounds, which I found frustrating enough to dig deep, after all it's ultra
+important matter ;)^
+
+I considered two possibilities:
+
+1. Devs added protection (checksum or whatever) to enforce the crappy *beep* notification.
+2. Devs added sound file validation, as perhaps HipChat gone mad for some users if it wasn't
+able to properly play the custom sound (unrecognized audio codec, etc).
+
+First point is so childish that I moved straight to point 2 and started digging:
+
+
+in: HipChat/localweb/hipchat-client.js, starting from line 23380:
+
+--- cut ---
+        function addSrc(audio, mediaType, path) {
+(...)
+                audio.appendChild(src);
+              }
+              if (typeof Audio !== "undefined") {
+                (function () {
+                  var supportCanPlay = 'oncanplay' in Audio.prototype;
+(...)
+                    if (supportCanPlay) {
+                      _this.audio[key].oncanplay = canPlayHandler;
+                    } else if (checkIfCanPlay('audio/ogg') || checkIfCanPlay('audio/mpeg')) {
+                      canPlayHandler();
+                    }
+                 addSrc(_this.audio[key], 'audio/ogg', path + '.ogg');
+                 addSrc(_this.audio[key], 'audio/mpeg', path + '.mp3');
+(...)
+--- cut ---
+
+From the code snipped above, we now know that:
+
+a) the devs placed two audio formats for each notification type not only to make you confused
+but mainly to have a backup format in case one from the two formats is not recognized.
+
+b) the validation is metadata based, specifically the 'internet media type' tag is tested and so
+for mp3: 'audio/mpeg' is required and for OGG 'audio/ogg' tag.
+
+
+That's enough info to convert the notification sounds the way HipChat likes it.. I could convert
+just one file as per the current code, but I'm converting both anyway in case the code changes
+again with upcoming releases.
+
+Note: For the same reason it's not required but recommended to use the same Lame/Vorbis library 
+version as the original samples.
+
+
+
+# using same Lame ver 3.93, should be stereo + CBR, required: 'media type: audio/mpeg'
+/usr/local/lame-3.93/bin/lame --cbr --tg Blues -m s alarm_beep_1.mp3 notify-new.mp3
+
+# OGG via libvorbis, required: 'media type: audio/ogg'
+ffmpeg -i notify-new.mp3 -acodec vorbis -strict -2 -aq 60 notify-new.ogg
+
+
+# rename 'notify-new.mp3' and 'notify-new.ogg' to 'notify.mp3' and 'notify.ogg'
+# and place both renamed files, overwriting the original ones under the
+# %INSTALATION_PRFIX%\HipChat\localweb\assets\audio
+
+
+Enjoy!
+
+
+Now some fun, line 98200:
+--- cut ---
+	98200                window.hipchat = console || { log: _.noop }; // This is fucked up, but it's only used for logging
+--- cut ---
+
+Isn't the whole HipChat fucked up a little? ;-)
