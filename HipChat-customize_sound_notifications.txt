@@ -67,7 +67,7 @@ ffmpeg -i notify-new.mp3 -acodec vorbis -strict -2 -aq 60 notify-new.ogg
 
 # rename 'notify-new.mp3' and 'notify-new.ogg' to 'notify.mp3' and 'notify.ogg'
 # and place both renamed files, overwriting the original ones under the
-# %INSTALATION_PRFIX%\HipChat\localweb\assets\audio
+# %INSTALATION_PREFIX%\HipChat\localweb\assets\audio
 
 
 Enjoy!
